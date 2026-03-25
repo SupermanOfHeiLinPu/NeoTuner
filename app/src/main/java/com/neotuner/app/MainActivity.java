@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
                         frequencyTextView.setText(String.format(Locale.getDefault(), "%.2f Hz", frequency));
                         targetFrequencyTextView.setText(String.format(Locale.getDefault(), "目标: %.2f Hz", note.frequency));
 
-                        String centsText = String.format(Locale.getDefault(), "%+.1f 音分", cents);
+                        String centsText = String.format(Locale.getDefault(), "%+.1f", cents);
                         centsTextView.setText(centsText);
 
                         if (Math.abs(cents) < 5) {
@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
                     noteNameTextView.setText("--");
                     frequencyTextView.setText("-- Hz");
                     targetFrequencyTextView.setText("目标: -- Hz");
-                    centsTextView.setText("0.0 音分");
+                    centsTextView.setText("0.0");
                     centsTextView.setTextColor(0xFFFFFFFF);
                 }
             }
