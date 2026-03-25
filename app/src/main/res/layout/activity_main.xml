@@ -27,11 +27,14 @@
             android:id="@+id/noteNameTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="1.2"
             android:text="--"
             android:textSize="72sp"
             android:textColor="#FFFFFF"
-            android:gravity="center" />
+            android:gravity="center"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="none" />
 
         <TextView
             android:id="@+id/centsTextView"
