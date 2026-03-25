@@ -10,6 +10,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -89,11 +91,39 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.menu_settings) {
-            showA4FrequencyDialog();
+        if (id == R.id.menu_more) {
+            showMoreMenu(findViewById(R.id.menu_more));
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showMoreMenu(View anchor) {
+        PopupMenu popupMenu = new PopupMenu(this, anchor);
+        popupMenu.getMenuInflater().inflate(R.menu.menu_more_options, popupMenu.getMenu());
+
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem menuItem) {
+                return handleMoreMenuItem(menuItem);
+            }
+        });
+
+        popupMenu.show();
+    }
+
+    private boolean handleMoreMenuItem(MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_set_a4_frequency) {
+            showA4FrequencyDialog();
+            return true;
+        } else if (itemId == R.id.menu_about) {
+            showAboutDialog();
+            return true;
+        }
+
+        return false;
     }
 
     private void showA4FrequencyDialog() {
@@ -119,6 +149,24 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "A4频率已设置为 " + items[which], Toast.LENGTH_SHORT).show();
             dialog.dismiss();
         });
+        builder.show();
+    }
+
+    private void showAboutDialog() {
+        String versionName = "1.0";
+        String aboutMessage = String.format(Locale.getDefault(),
+                "NeoTuner\n\n" +
+                        "版本: %s\n\n" +
+                        "一个功能强大的Android调音器应用\n" +
+                        "支持钢琴88键全音域\n\n" +
+                        "作者: NeoTuner Team\n\n" +
+                        "© 2025 All Rights Reserved",
+                versionName);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("关于");
+        builder.setMessage(aboutMessage);
+        builder.setPositiveButton("确定", null);
         builder.show();
     }
 
