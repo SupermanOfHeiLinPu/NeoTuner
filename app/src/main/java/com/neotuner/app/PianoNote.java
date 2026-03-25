@@ -1,7 +1,7 @@
 package com.neotuner.app;
 
 public class PianoNote {
-    private static final double A4_FREQ = 440.0;
+    private static double a4Freq = 440.0;
     private static final double SEMITONE_RATIO = Math.pow(2, 1.0 / 12);
     private static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
@@ -23,12 +23,20 @@ public class PianoNote {
         }
     }
 
+    public static void setA4Frequency(double frequency) {
+        a4Freq = frequency;
+    }
+
+    public static double getA4Frequency() {
+        return a4Freq;
+    }
+
     public static Note findClosestNote(double frequency) {
         if (frequency <= 0) {
             return null;
         }
 
-        double centsFromA4 = 1200 * Math.log(frequency / A4_FREQ) / Math.log(2);
+        double centsFromA4 = 1200 * Math.log(frequency / a4Freq) / Math.log(2);
         int nearestSemitones = (int) Math.round(centsFromA4 / 100);
         int midiNumber = 69 + nearestSemitones;
 
@@ -36,7 +44,7 @@ public class PianoNote {
             return null;
         }
 
-        double noteFrequency = A4_FREQ * Math.pow(SEMITONE_RATIO, nearestSemitones);
+        double noteFrequency = a4Freq * Math.pow(SEMITONE_RATIO, nearestSemitones);
         int noteIndex = (midiNumber - 21) % 12;
         int octave = (midiNumber - 12) / 12;
 
@@ -56,7 +64,7 @@ public class PianoNote {
         }
 
         int semitonesFromA4 = midiNumber - 69;
-        double frequency = A4_FREQ * Math.pow(SEMITONE_RATIO, semitonesFromA4);
+        double frequency = a4Freq * Math.pow(SEMITONE_RATIO, semitonesFromA4);
         int noteIndex = (midiNumber - 21) % 12;
         int octave = (midiNumber - 12) / 12;
 

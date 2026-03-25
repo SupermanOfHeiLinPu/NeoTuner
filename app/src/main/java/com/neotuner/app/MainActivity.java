@@ -1,11 +1,15 @@
 package com.neotuner.app;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,22 +22,28 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final String PREFS_NAME = "NeoTunerPrefs";
+    private static final String KEY_A4_FREQUENCY = "a4_frequency";
 
     private AudioRecorder audioRecorder;
     private PitchDetector pitchDetector;
     private OscilloscopeView oscilloscopeView;
     private TextView noteNameTextView;
-    private TextView frequencyTextView;
+    private TextView frequencyValueTextView;
     private TextView centsTextView;
     private TextView targetFrequencyTextView;
 
     private Handler mainHandler;
     private short[] currentAudioBuffer;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        loadA4Frequency();
 
         initViews();
         initComponents();
@@ -45,10 +55,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void loadA4Frequency() {
+        double savedFreq = prefs.getFloat(KEY_A4_FREQUENCY, 440.0f);
+        PianoNote.setA4Frequency(savedFreq);
+    }
+
+    private void saveA4Frequency(double frequency) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putFloat(KEY_A4_FREQUENCY, (float) frequency);
+        editor.apply();
+        PianoNote.setA4Frequency(frequency);
+    }
+
     private void initViews() {
         oscilloscopeView = findViewById(R.id.oscilloscopeView);
         noteNameTextView = findViewById(R.id.noteNameTextView);
-        frequencyTextView = findViewById(R.id.frequencyTextView);
+        frequencyValueTextView = findViewById(R.id.frequencyValueTextView);
         centsTextView = findViewById(R.id.centsTextView);
         targetFrequencyTextView = findViewById(R.id.targetFrequencyTextView);
     }
@@ -56,6 +78,48 @@ public class MainActivity extends AppCompatActivity {
     private void initComponents() {
         mainHandler = new Handler(Looper.getMainLooper());
         pitchDetector = new PitchDetector();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.menu_settings) {
+            showA4FrequencyDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showA4FrequencyDialog() {
+        final double[] frequencies = {440.0, 441.0, 442.0, 443.0, 444.0};
+        final String[] items = new String[frequencies.length];
+        for (int i = 0; i < frequencies.length; i++) {
+            items[i] = String.format(Locale.getDefault(), "%.0f Hz", frequencies[i]);
+        }
+
+        double currentFreq = PianoNote.getA4Frequency();
+        int checkedIndex = 0;
+        for (int i = 0; i < frequencies.length; i++) {
+            if (Math.abs(frequencies[i] - currentFreq) < 0.1) {
+                checkedIndex = i;
+                break;
+            }
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("选择A4频率");
+        builder.setSingleChoiceItems(items, checkedIndex, (dialog, which) -> {
+            saveA4Frequency(frequencies[which]);
+            Toast.makeText(this, "A4频率已设置为 " + items[which], Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+        builder.show();
     }
 
     private boolean checkPermission() {
@@ -112,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
                         double cents = PianoNote.getCentsDifference(frequency, note.frequency);
 
                         noteNameTextView.setText(note.getFullName());
-                        frequencyTextView.setText(String.format(Locale.getDefault(), "%.2f Hz", frequency));
+                        frequencyValueTextView.setText(String.format(Locale.getDefault(), "%.2f", frequency));
                         targetFrequencyTextView.setText(String.format(Locale.getDefault(), "目标: %.2f Hz", note.frequency));
 
                         String centsText = String.format(Locale.getDefault(), "%+.1f", cents);
@@ -130,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else {
                     noteNameTextView.setText("--");
-                    frequencyTextView.setText("-- Hz");
+                    frequencyValueTextView.setText("--");
                     targetFrequencyTextView.setText("目标: -- Hz");
                     centsTextView.setText("0.0");
                     centsTextView.setTextColor(0xFFFFFFFF);
