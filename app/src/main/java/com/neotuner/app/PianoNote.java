@@ -45,8 +45,8 @@ public class PianoNote {
         }
 
         double noteFrequency = a4Freq * Math.pow(SEMITONE_RATIO, nearestSemitones);
-        int noteIndex = (midiNumber - 21) % 12;
-        int octave = (midiNumber - 12) / 12;
+        int noteIndex = midiNumber % 12;
+        int octave = (midiNumber / 12) - 1;
 
         return new Note(NOTE_NAMES[noteIndex], octave, noteFrequency, midiNumber);
     }
@@ -65,8 +65,8 @@ public class PianoNote {
 
         int semitonesFromA4 = midiNumber - 69;
         double frequency = a4Freq * Math.pow(SEMITONE_RATIO, semitonesFromA4);
-        int noteIndex = (midiNumber - 21) % 12;
-        int octave = (midiNumber - 12) / 12;
+        int noteIndex = midiNumber % 12;
+        int octave = (midiNumber / 12) - 1;
 
         return new Note(NOTE_NAMES[noteIndex], octave, frequency, midiNumber);
     }
