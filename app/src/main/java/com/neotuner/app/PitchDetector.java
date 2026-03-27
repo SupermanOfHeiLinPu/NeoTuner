@@ -3,7 +3,11 @@ package com.neotuner.app;
 public class PitchDetector {
     private static final int SAMPLE_RATE = 44100;
     private static final int FFT_SIZE = 4096;
+    private static final double MIN_FREQUENCY = 27.5;
+    private static final double MAX_FREQUENCY = 4186.0;
     private double[] window;
+    private double lastFrequency = -1;
+    private static final double MAX_FREQUENCY_CHANGE = 0.3;
 
     public PitchDetector() {
         createHanningWindow();
@@ -36,19 +40,82 @@ public class PitchDetector {
             magnitude[i] = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
         }
 
-        int peakIndex = -1;
-        double maxMagnitude = 0;
-        for (int i = 10; i < FFT_SIZE / 2; i++) {
-            if (magnitude[i] > maxMagnitude) {
-                maxMagnitude = magnitude[i];
-                peakIndex = i;
+        int minIndex = (int) Math.ceil(MIN_FREQUENCY * FFT_SIZE / SAMPLE_RATE);
+        int maxIndex = (int) Math.floor(MAX_FREQUENCY * FFT_SIZE / SAMPLE_RATE);
+        minIndex = Math.max(minIndex, 10);
+        maxIndex = Math.min(maxIndex, FFT_SIZE / 2 - 1);
+
+        class Peak {
+            int index;
+            double magnitude;
+            double frequency;
+            Peak(int index, double magnitude) {
+                this.index = index;
+                this.magnitude = magnitude;
+                this.frequency = index * SAMPLE_RATE / (double)FFT_SIZE;
             }
         }
 
-        if (peakIndex == -1 || maxMagnitude < 0.01) {
+        java.util.List<Peak> peaks = new java.util.ArrayList<>();
+        for (int i = minIndex; i <= maxIndex; i++) {
+            if (magnitude[i] > magnitude[i-1] && magnitude[i] > magnitude[i+1]) {
+                peaks.add(new Peak(i, magnitude[i]));
+            }
+        }
+
+        if (peaks.isEmpty()) {
             return -1;
         }
 
+        peaks.sort((a, b) -> Double.compare(b.magnitude, a.magnitude));
+        int topN = Math.min(7, peaks.size());
+        java.util.List<Peak> topPeaks = new java.util.ArrayList<>(peaks.subList(0, topN));
+        topPeaks.sort((a, b) -> Integer.compare(a.index, b.index));
+
+        Peak bestPeak = null;
+        double bestScore = -1;
+
+        for (Peak peak : topPeaks) {
+            double score = 0;
+            
+            score += 1200.0 / (peak.index + 10);
+            score += peak.magnitude * 100;
+            
+            double freq = peak.frequency;
+            for (Peak lowerPeak : topPeaks) {
+                if (lowerPeak.index < peak.index) {
+                    double ratio = freq / lowerPeak.frequency;
+                    int nearestHarmonic = (int)Math.round(ratio);
+                    if (nearestHarmonic >= 2 && nearestHarmonic <= 6) {
+                        double harmonicRatio = ratio / nearestHarmonic;
+                        if (harmonicRatio > 0.97 && harmonicRatio < 1.03) {
+                            score -= 150;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (lastFrequency > 0) {
+                double ratio = Math.abs(freq - lastFrequency) / lastFrequency;
+                if (ratio < 0.2) {
+                    score += 400;
+                } else if (ratio < 0.35) {
+                    score += 100;
+                }
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestPeak = peak;
+            }
+        }
+
+        if (bestPeak == null || bestPeak.magnitude < 0.01) {
+            return -1;
+        }
+
+        int peakIndex = bestPeak.index;
         double interpolatedIndex = peakIndex;
         if (peakIndex > 0 && peakIndex < FFT_SIZE / 2 - 1) {
             double y1 = magnitude[peakIndex - 1];
@@ -57,7 +124,17 @@ public class PitchDetector {
             interpolatedIndex = peakIndex + (y3 - y1) / (2 * (2 * y2 - y1 - y3));
         }
 
-        return interpolatedIndex * SAMPLE_RATE / FFT_SIZE;
+        double frequency = interpolatedIndex * SAMPLE_RATE / FFT_SIZE;
+
+        if (lastFrequency > 0) {
+            double ratio = Math.abs(frequency - lastFrequency) / lastFrequency;
+            if (ratio > 0.25) {
+                frequency = lastFrequency + (frequency - lastFrequency) * 0.35;
+            }
+        }
+
+        lastFrequency = frequency;
+        return frequency;
     }
 
     private void fft(double[] real, double[] imag) {
